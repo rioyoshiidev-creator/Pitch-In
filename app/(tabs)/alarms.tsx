@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Switch,
   Modal,
+  Animated,
 } from 'react-native'
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -193,6 +194,25 @@ function AlarmEditModal({
   const [notifySubstitution, setNotifySubstitution] = useState(alarm.notifySubstitution)
   const snooze = false
 
+  const slideAnim = useRef(new Animated.Value(0)).current
+  const fadeAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 1, useNativeDriver: true, bounciness: 0, speed: 20 }),
+    ]).start()
+  }, [])
+
+  const animateClose = (callback: () => void) => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => callback())
+  }
+
+  const sheetTranslateY = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [800, 0] })
+
   const previewTime =
     selectedOption.alarmTiming === 'lineup'
       ? 'スタメン発表時'
@@ -201,19 +221,22 @@ function AlarmEditModal({
         : `${formatAlarmTime(alarm.matchDate, selectedOption.minutesBefore)} (${selectedOption.minutesBefore}分前)`
 
   const handleSave = () => {
-    onSave({
+    const updated = {
       ...alarm,
       alarmTiming: live ? 'before_kickoff' : selectedOption.alarmTiming,
       minutesBefore: live ? 0 : selectedOption.minutesBefore,
       notifySubstitution,
       snooze,
-    })
+    }
+    animateClose(() => onSave(updated as typeof alarm))
   }
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose} />
-      <View style={styles.modalSheet}>
+    <Modal visible transparent animationType="none" onRequestClose={() => animateClose(onClose)}>
+      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => animateClose(onClose)} />
+      </Animated.View>
+      <Animated.View style={[styles.modalSheet, { transform: [{ translateY: sheetTranslateY }] }]}>
         <View style={styles.modalHandle} />
 
         <View style={styles.modalHeader}>
@@ -274,7 +297,7 @@ function AlarmEditModal({
             <Text style={styles.alarmCautionText}>
               通信環境や端末の状態によってはアラームが鳴らない場合があります
             </Text>
-            <TouchableOpacity onPress={() => { onClose(); router.push('/alarm-help') }} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => animateClose(() => { onClose(); router.push('/alarm-help') })} activeOpacity={0.7}>
               <Text style={styles.alarmCautionLink}>詳しくはこちら →</Text>
             </TouchableOpacity>
           </View>
@@ -284,10 +307,10 @@ function AlarmEditModal({
           <Text style={styles.saveBtnText}>アラームを更新</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.modalDeleteBtn} onPress={onDelete}>
+        <TouchableOpacity style={styles.modalDeleteBtn} onPress={() => animateClose(onDelete)}>
           <Text style={styles.modalDeleteBtnText}>アラームを削除</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </Modal>
   )
 }

@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Linking,
   AppState,
+  Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -420,54 +421,33 @@ const MatchCard = React.memo(function MatchCard({ match, onAlarmPress }: { match
       </View>
 
       {/* アラームボタン */}
-      {((isScheduled && hasFollowedPlayer) || hasBenchInLive) && (() => {
-        const hoursUntil = (new Date(match.date).getTime() - Date.now()) / 3600000
-        const canSetAlarm = isLive || alarm || hoursUntil <= 24
-
-        if (!canSetAlarm) {
-          const availableAt = new Date(new Date(match.date).getTime() - 24 * 3600000)
-          const month = availableAt.getMonth() + 1
-          const day = availableAt.getDate()
-          const hour = availableAt.getHours().toString().padStart(2, '0')
-          const min = availableAt.getMinutes().toString().padStart(2, '0')
-          return (
-            <View style={[styles.alarmBar, styles.alarmBarLocked]}>
-              <Ionicons name="alarm-outline" size={14} color={Colors.textDim} />
-              <Text style={[styles.alarmBarText, styles.alarmBarTextLocked]}>
-                {month}/{day} {hour}:{min} からアラームを設定できます
-              </Text>
-            </View>
-          )
-        }
-
-        return (
-          <TouchableOpacity
-            style={[styles.alarmBar, alarm && styles.alarmBarSet]}
-            onPress={() => onAlarmPress(match)}
-            activeOpacity={0.75}
-          >
-            <Ionicons
-              name={alarm ? 'alarm' : 'alarm-outline'}
-              size={14}
-              color={alarm ? Colors.background : Colors.textSecondary}
-            />
-            <Text style={[styles.alarmBarText, alarm && styles.alarmBarTextSet]}>
-              {alarm
-                ? isLive
-                  ? 'アラーム設定済み（途中出場時）'
-                  : `アラーム設定済み（${alarmLabel}）`
-                : isLive
-                  ? '途中出場アラームを設定する'
-                  : 'アラームを設定する'}
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={12}
-              color={alarm ? Colors.background : Colors.textDim}
-            />
-          </TouchableOpacity>
-        )
-      })()}
+      {((isScheduled && hasFollowedPlayer) || hasBenchInLive) && (
+        <TouchableOpacity
+          style={[styles.alarmBar, alarm && styles.alarmBarSet]}
+          onPress={() => onAlarmPress(match)}
+          activeOpacity={0.75}
+        >
+          <Ionicons
+            name={alarm ? 'alarm' : 'alarm-outline'}
+            size={14}
+            color={alarm ? Colors.background : Colors.textSecondary}
+          />
+          <Text style={[styles.alarmBarText, alarm && styles.alarmBarTextSet]}>
+            {alarm
+              ? isLive
+                ? 'アラーム設定済み（途中出場時）'
+                : `アラーム設定済み（${alarmLabel}）`
+              : isLive
+                ? '途中出場アラームを設定する'
+                : 'アラームを設定する'}
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={12}
+            color={alarm ? Colors.background : Colors.textDim}
+          />
+        </TouchableOpacity>
+      )}
     </View>
   )
 })
@@ -577,6 +557,25 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
     )
   }
 
+  const slideAnim = useRef(new Animated.Value(0)).current
+  const fadeAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 1, useNativeDriver: true, bounciness: 0, speed: 20 }),
+    ]).start()
+  }, [])
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => onClose())
+  }
+
+  const sheetTranslateY = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [800, 0] })
+
   const matchTimeStr = formatMatchTime(match.date)
   const previewTime =
     selectedOption.alarmTiming === 'lineup'
@@ -601,18 +600,20 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
       selectedPlayerIds,
     }
     addAlarm(alarm)
-    onClose()
+    handleClose()
   }
 
   const handleDelete = () => {
     if (existing) deleteAlarm(existing.id)
-    onClose()
+    handleClose()
   }
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose} />
-      <View style={styles.modalSheet}>
+    <Modal visible transparent animationType="none" onRequestClose={handleClose}>
+      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={handleClose} />
+      </Animated.View>
+      <Animated.View style={[styles.modalSheet, { transform: [{ translateY: sheetTranslateY }] }]}>
         <View style={styles.modalHandle} />
 
         <View style={styles.modalHeader}>
@@ -695,9 +696,9 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
           <Ionicons name="warning-outline" size={13} color={Colors.textDim} />
           <View style={{ flex: 1 }}>
             <Text style={styles.alarmCautionText}>
-              通信環境や端末の状態によってはアラームが鳴らない場合があります
+              通信環境や端末の状態によっては、アラームが鳴らなかったり時刻がずれる場合があります
             </Text>
-            <TouchableOpacity onPress={() => { onClose(); router.push('/alarm-help') }} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => { handleClose(); router.push('/alarm-help') }} activeOpacity={0.7}>
               <Text style={styles.alarmCautionLink}>詳しくはこちら →</Text>
             </TouchableOpacity>
           </View>
@@ -712,7 +713,7 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
             <Text style={styles.deleteBtnText}>アラームを削除</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </Animated.View>
     </Modal>
   )
 }
@@ -802,10 +803,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceHigh,
   },
   alarmBarSet: { backgroundColor: Colors.primary },
-  alarmBarLocked: { backgroundColor: 'transparent' },
   alarmBarText: { flex: 1, fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   alarmBarTextSet: { color: Colors.background },
-  alarmBarTextLocked: { color: Colors.textDim },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   modalSheet: {

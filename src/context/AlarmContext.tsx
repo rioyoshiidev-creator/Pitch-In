@@ -32,7 +32,7 @@ export function AlarmProvider({ children }: { children: React.ReactNode }) {
   const [alarms, setAlarms] = useState<Alarm[]>([])
   const [alarmDefault, setAlarmDefaultState] = useState<AlarmDefault>({
     alarmTiming: 'before_kickoff',
-    minutesBefore: 30,
+    minutesBefore: 5,
   })
   const { deviceId } = useDevice()
   const alarmsRef = useRef<Alarm[]>(alarms)

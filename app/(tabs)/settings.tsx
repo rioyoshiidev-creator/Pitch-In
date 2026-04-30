@@ -52,7 +52,7 @@ export default function SettingsScreen() {
 
         <Text style={styles.sectionLabel}>ヘルプ</Text>
         <SettingRow label="使い方を見る" onPress={openHowTo} />
-        <SettingRow label="アラームが鳴らない時" onPress={() => router.push('/alarm-help')} />
+        <SettingRow label="アラームについて" onPress={() => router.push('/alarm-help')} />
 
         <Text style={styles.sectionLabel}>その他</Text>
         <SettingRow label="利用規約" onPress={() => router.push('/terms')} />
