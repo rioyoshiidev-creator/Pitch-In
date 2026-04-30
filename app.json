@@ -2,6 +2,7 @@
   "expo": {
     "name": "pitch-in",
     "slug": "pitch-in",
+    "scheme": "pitchin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,11 +11,35 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A0A0A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pitchin.app",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification",
+          "fetch"
+        ],
+        "NSUserNotificationUsageDescription": "試合開始・選手出場時にアラームで知らせます",
+        "NSAlarmKitUsageDescription": "試合開始・選手出場時にアラームで起こします"
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.pitchin.app"
+        ]
+      }
     },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "mode": "development"
+        }
+      ],
+      "expo-dev-client",
+      "expo-router"
+    ],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -25,6 +50,13 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f0a5b579-393a-4bec-bc09-87379a2a2172"
+      }
+    },
+    "owner": "rioyoshii"
   }
 }

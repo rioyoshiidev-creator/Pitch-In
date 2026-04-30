@@ -1,0 +1,240 @@
+diff --git a/node_modules/expo-alarm-kit/ios/ExpoAlarmKitModule.swift b/node_modules/expo-alarm-kit/ios/ExpoAlarmKitModule.swift
+index eadb113..15c69f4 100644
+--- a/node_modules/expo-alarm-kit/ios/ExpoAlarmKitModule.swift
++++ b/node_modules/expo-alarm-kit/ios/ExpoAlarmKitModule.swift
+@@ -257,6 +257,10 @@ public struct AlarmSnoozeIntentWithLaunch: LiveActivityIntent {
+     }
+ }
+ 
++// MARK: - Shared AlarmMetadata (module level for ActivityKit type registration)
++@available(iOS 26.0, *)
++struct ExpoAlarmMeta: AlarmMetadata {}
++
+ // MARK: - Expo Module
+ @available(iOS 26.0, *)
+ public class ExpoAlarmKitModule: Module {
+@@ -329,8 +333,6 @@ public class ExpoAlarmKitModule: Module {
+         
+         // MARK: - Schedule One-Time Alarm
+         AsyncFunction("scheduleAlarm") { (options: ScheduleAlarmOptions) async throws -> Bool in
+-            struct Meta: AlarmMetadata {}
+-            
+             let date = Date(timeIntervalSince1970: options.epochSeconds)
+             guard let uuid = UUID(uuidString: options.id) else {
+                 print("[ExpoAlarmKit] Invalid UUID string: \(options.id)")
+@@ -349,40 +351,53 @@ public class ExpoAlarmKitModule: Module {
+                 systemImageName: "stop.circle"
+             )
+             
+-            // Create snooze button
+-            let snoozeLabel = options.snoozeButtonLabel ?? "Snooze"
+-            let snoozeColor = options.snoozeButtonColor != nil ? colorFromHex(options.snoozeButtonColor!) : Color.white
+-            let snoozeButton = AlarmButton(
+-                text: LocalizedStringResource(stringLiteral: snoozeLabel),
+-                textColor: snoozeColor,
+-                systemImageName: "clock.badge.checkmark"
+-            )
+-            
+-            // Create alert presentation with intent if needed
+-            let alertPresentation = AlarmPresentation.Alert(
+-                title: LocalizedStringResource(stringLiteral: options.title),
+-                stopButton: stopButton,
+-                secondaryButton: snoozeButton,
+-                secondaryButtonBehavior: .countdown
+-            )
+-            
+-            let presentation = AlarmPresentation(alert: alertPresentation)
++            // doSnoozeIntent=true のときのみスヌーズボタンを表示（iOSアラームと同じ挙動）
++            let alertPresentation: AlarmPresentation.Alert
++            let presentation: AlarmPresentation
++            if doSnoozeIntent {
++                let snoozeLabel = options.snoozeButtonLabel ?? "Snooze"
++                let snoozeColor = options.snoozeButtonColor != nil ? colorFromHex(options.snoozeButtonColor!) : Color.white
++                let snoozeButton = AlarmButton(
++                    text: LocalizedStringResource(stringLiteral: snoozeLabel),
++                    textColor: snoozeColor,
++                    systemImageName: "clock.badge.checkmark"
++                )
++                alertPresentation = AlarmPresentation.Alert(
++                    title: LocalizedStringResource(stringLiteral: options.title),
++                    stopButton: stopButton,
++                    secondaryButton: snoozeButton,
++                    secondaryButtonBehavior: .countdown
++                )
++                // スヌーズ中のロック画面カウントダウン表示
++                let countdownPresentation = AlarmPresentation.Countdown(
++                    title: LocalizedStringResource(stringLiteral: options.title),
++                    pauseButton: AlarmButton(
++                        text: LocalizedStringResource(stringLiteral: stopLabel),
++                        textColor: stopColor,
++                        systemImageName: "xmark.circle"
++                    )
++                )
++                presentation = AlarmPresentation(alert: alertPresentation, countdown: countdownPresentation)
++            } else {
++                alertPresentation = AlarmPresentation.Alert(
++                    title: LocalizedStringResource(stringLiteral: options.title),
++                    stopButton: stopButton
++                )
++                presentation = AlarmPresentation(alert: alertPresentation)
++            }
+ 
+-            // Create countdown duration for snooze
+             let countdownDuration = Alarm.CountdownDuration(
+                 preAlert: nil,
+                 postAlert: TimeInterval(options.snoozeDuration ?? (9 * 60))
+             )
+ 
+-            // Create attributes
+             let alarmTintColor = options.tintColor != nil ? colorFromHex(options.tintColor!) : Color.blue
+-            let attributes = AlarmAttributes<Meta>(
++            let attributes = AlarmAttributes<ExpoAlarmMeta>(
+                 presentation: presentation,
+-                metadata: Meta(),
++                metadata: ExpoAlarmMeta(),
+                 tintColor: alarmTintColor
+             )
+ 
+-            // Determine sound
+             let alarmSound: AlertConfiguration.AlertSound
+             if let soundName = options.soundName, !soundName.isEmpty {
+                 alarmSound = .named(soundName)
+@@ -390,30 +405,17 @@ public class ExpoAlarmKitModule: Module {
+                 alarmSound = .default
+             }
+ 
+-            // Choose the appropriate intent based on launchAppOnDismiss
+-            // AlarmDismissIntentWithLaunch sets openAppWhenRun=true, AlarmDismissIntent sets it to false
+             let stopIntent: any LiveActivityIntent = launchAppOnDismiss
+                 ? AlarmDismissIntentWithLaunch(alarmId: options.id, payload: options.dismissPayload)
+                 : AlarmDismissIntent(alarmId: options.id, payload: options.dismissPayload)
+ 
+-            let secondaryIntent: (any LiveActivityIntent)?
+-            if doSnoozeIntent {
+-                if launchAppOnSnooze {
+-                    secondaryIntent = AlarmSnoozeIntentWithLaunch(alarmId: options.id, payload: options.snoozePayload)
+-                } else {
+-                    secondaryIntent = AlarmSnoozeIntent(alarmId: options.id, payload: options.snoozePayload)
+-                }
+-            } else {
+-                secondaryIntent = nil
+-            }
+-            
+-            // Create configuration
+-            let config = AlarmManager.AlarmConfiguration<Meta>(
++            // secondaryIntent は常に nil（ネイティブの .countdown でスヌーズを制御）
++            let config = AlarmManager.AlarmConfiguration<ExpoAlarmMeta>(
+                 countdownDuration: countdownDuration,
+                 schedule: .fixed(date),
+                 attributes: attributes,
+                 stopIntent: stopIntent,
+-                secondaryIntent: secondaryIntent,
++                secondaryIntent: nil,
+                 sound: alarmSound
+             )
+             
+@@ -469,32 +471,44 @@ public class ExpoAlarmKitModule: Module {
+                 systemImageName: "stop.circle"
+             )
+             
+-            // Create snooze button
+-            let snoozeLabel = options.snoozeButtonLabel ?? "Snooze"
+-            let snoozeColor = options.snoozeButtonColor != nil ? colorFromHex(options.snoozeButtonColor!) : Color.white
+-            let snoozeButton = AlarmButton(
+-                text: LocalizedStringResource(stringLiteral: snoozeLabel),
+-                textColor: snoozeColor,
+-                systemImageName: "clock.badge.checkmark"
+-            )
+-            
+-            // Create alert presentation
+-            let alertPresentation = AlarmPresentation.Alert(
+-                title: LocalizedStringResource(stringLiteral: options.title),
+-                stopButton: stopButton,
+-                secondaryButton: snoozeButton,
+-                secondaryButtonBehavior: .countdown
+-            )
+-            
+-            let presentation = AlarmPresentation(alert: alertPresentation)
++            let alertPresentation: AlarmPresentation.Alert
++            let presentation: AlarmPresentation
++            if doSnoozeIntent {
++                let snoozeLabel = options.snoozeButtonLabel ?? "Snooze"
++                let snoozeColor = options.snoozeButtonColor != nil ? colorFromHex(options.snoozeButtonColor!) : Color.white
++                let snoozeButton = AlarmButton(
++                    text: LocalizedStringResource(stringLiteral: snoozeLabel),
++                    textColor: snoozeColor,
++                    systemImageName: "clock.badge.checkmark"
++                )
++                alertPresentation = AlarmPresentation.Alert(
++                    title: LocalizedStringResource(stringLiteral: options.title),
++                    stopButton: stopButton,
++                    secondaryButton: snoozeButton,
++                    secondaryButtonBehavior: .countdown
++                )
++                let countdownPresentation = AlarmPresentation.Countdown(
++                    title: LocalizedStringResource(stringLiteral: options.title),
++                    pauseButton: AlarmButton(
++                        text: LocalizedStringResource(stringLiteral: stopLabel),
++                        textColor: stopColor,
++                        systemImageName: "xmark.circle"
++                    )
++                )
++                presentation = AlarmPresentation(alert: alertPresentation, countdown: countdownPresentation)
++            } else {
++                alertPresentation = AlarmPresentation.Alert(
++                    title: LocalizedStringResource(stringLiteral: options.title),
++                    stopButton: stopButton
++                )
++                presentation = AlarmPresentation(alert: alertPresentation)
++            }
+ 
+-            // Create countdown duration for snooze
+             let countdownDuration = Alarm.CountdownDuration(
+                 preAlert: nil,
+                 postAlert: TimeInterval(options.snoozeDuration ?? (9 * 60))
+             )
+ 
+-            // Create attributes
+             let alarmTintColor = options.tintColor != nil ? colorFromHex(options.tintColor!) : Color.blue
+             let attributes = AlarmAttributes<Meta>(
+                 presentation: presentation,
+@@ -502,7 +516,6 @@ public class ExpoAlarmKitModule: Module {
+                 tintColor: alarmTintColor
+             )
+ 
+-            // Determine sound
+             let alarmSound: AlertConfiguration.AlertSound
+             if let soundName = options.soundName, !soundName.isEmpty {
+                 alarmSound = .named(soundName)
+@@ -510,30 +523,16 @@ public class ExpoAlarmKitModule: Module {
+                 alarmSound = .default
+             }
+ 
+-            // Choose the appropriate intent based on launchAppOnDismiss
+-            // AlarmDismissIntentWithLaunch sets openAppWhenRun=true, AlarmDismissIntent sets it to false
+             let stopIntent: any LiveActivityIntent = launchAppOnDismiss
+                 ? AlarmDismissIntentWithLaunch(alarmId: options.id, payload: options.dismissPayload)
+                 : AlarmDismissIntent(alarmId: options.id, payload: options.dismissPayload)
+ 
+-            let secondaryIntent: (any LiveActivityIntent)?
+-            if doSnoozeIntent {
+-                if launchAppOnSnooze {
+-                    secondaryIntent = AlarmSnoozeIntentWithLaunch(alarmId: options.id, payload: options.snoozePayload)
+-                } else {
+-                    secondaryIntent = AlarmSnoozeIntent(alarmId: options.id, payload: options.snoozePayload)
+-                }
+-            } else {
+-                secondaryIntent = nil
+-            }
+-            
+-            // Create configuration with relative schedule
+             let config = AlarmManager.AlarmConfiguration<Meta>(
+                 countdownDuration: countdownDuration,
+                 schedule: schedule,
+                 attributes: attributes,
+                 stopIntent: stopIntent,
+-                secondaryIntent: secondaryIntent,
++                secondaryIntent: nil,
+                 sound: alarmSound
+             )
+             

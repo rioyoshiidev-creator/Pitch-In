@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <clipPath id="appShape">
+      <rect width="1024" height="1024" rx="220"/>
+    </clipPath>
+    <linearGradient id="pitchGrad" x1="0.5" y1="1" x2="0.5" y2="0">
+      <stop offset="0%" stop-color="#103E1A"/>
+      <stop offset="100%" stop-color="#072010"/>
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0D1812"/>
+      <stop offset="100%" stop-color="#0A1410"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#appShape)">
+
+    <!-- Background (outside pitch) -->
+    <rect width="1024" height="1024" fill="url(#bgGrad)"/>
+
+    <!-- ============================================================
+         PITCH: one-point perspective trapezoid
+         Near touchline: y=760, x=70–954  (wide / close to viewer)
+         Far goal line:  y=155, x=325–699 (narrow / far)
+         ============================================================ -->
+    <polygon points="70,760 954,760 699,155 325,155" fill="url(#pitchGrad)"/>
+
+    <!-- Pitch outer boundary -->
+    <polygon points="70,760 954,760 699,155 325,155"
+             fill="none" stroke="rgba(255,255,255,0.70)" stroke-width="8"/>
+
+    <!-- Halfway line (t=0.5, y=458) -->
+    <!-- left=70+0.5*(325-70)=198  right=954-0.5*(954-699)=827 -->
+    <line x1="198" y1="458" x2="827" y2="458"
+          stroke="rgba(255,255,255,0.58)" stroke-width="7"/>
+
+    <!-- Center circle (ellipse compressed by perspective) -->
+    <ellipse cx="512" cy="458" rx="126" ry="42"
+             fill="none" stroke="rgba(255,255,255,0.58)" stroke-width="7"/>
+    <circle cx="512" cy="458" r="9" fill="rgba(255,255,255,0.48)"/>
+
+    <!-- Near penalty area                                         -->
+    <!-- Bottom (y=760): ±160 from centre 512 → x=352 to 672     -->
+    <!-- Top   (y=650): each side shifts inward by 0.182*255≈46   -->
+    <!--   left =352+46=398   right=672-46=626                    -->
+    <path d="M 352,760 L 398,650 L 626,650 L 672,760"
+          fill="none" stroke="rgba(255,255,255,0.42)" stroke-width="6"/>
+
+    <!-- Far penalty area (small, near top) -->
+    <!-- At y=155 pitch is x=325–699 (width 374). ±55 from 512 → x=457 to 567 -->
+    <!-- At y=200: t=(200-760)/(155-760)=0.926, shift=0.926*255=236 -->
+    <!--   left=70+236=306  right=954-236=718. penalty ±55 → 457..567 -->
+    <path d="M 457,155 L 447,200 L 577,200 L 567,155"
+          fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="5"/>
+
+    <!-- ============================================================
+         GLOWING NEAR TOUCHLINE — the Pitch-In line
+         ============================================================ -->
+    <line x1="70" y1="760" x2="954" y2="760"
+          stroke="#00E676" stroke-width="72" stroke-opacity="0.10"/>
+    <line x1="70" y1="760" x2="954" y2="760"
+          stroke="#00E676" stroke-width="32" stroke-opacity="0.35"/>
+    <line x1="70" y1="760" x2="954" y2="760"
+          stroke="#00E676" stroke-width="12"/>
+
+    <!-- ============================================================
+         FEET  — two white shoe silhouettes from above
+         Viewing angle: overhead + slightly from behind
+         Toe (pointed end) faces upward = into the pitch
+         Heel (rounded end) faces downward = toward viewer
+         Ankle stub merges with heel
+         ============================================================ -->
+
+    <!-- Subtle ground shadow under each foot -->
+    <ellipse cx="432" cy="718" rx="56" ry="18" fill="rgba(0,0,0,0.22)"/>
+    <ellipse cx="593" cy="845" rx="56" ry="18" fill="rgba(0,0,0,0.20)"/>
+
+    <!-- LEFT FOOT (leading — already stepped into pitch)
+         Shoe centre translated to (432, 638), rotated -8°
+         Shoe toe at local y=-74 → global ≈ (422, 564) inside pitch ✓
+         Heel at local y=+76 → global ≈ (443, 713) inside pitch ✓
+         Ankle extends to global ≈ (454, 797) — straddles touchline ✓  -->
+    <g transform="translate(432, 638) rotate(-8)">
+      <!-- Shoe body: pointed toe at top, rounded heel at bottom -->
+      <path d="M 0,-74
+               C 28,-72 44,-48 44,-18
+               C 44,12  38,46  24,66
+               C 14,76 -14,76 -24,66
+               C -38,46 -44,12 -44,-18
+               C -44,-48 -28,-72 0,-74 Z"
+            fill="white"/>
+      <!-- Ankle/shin stub — starts at y=64 (overlaps heel) to y=152 -->
+      <rect x="-20" y="64" width="40" height="88" rx="15" fill="white"/>
+    </g>
+
+    <!-- RIGHT FOOT (stepping over the touchline)
+         Shoe centre at (594, 800), rotated +9°
+         Shoe toe at local y=-74 → global ≈ (604, 727) inside pitch ✓
+         Shoe passes through touchline y=760 ✓
+         Heel at local y=+76 → global ≈ (584, 873) outside pitch ✓
+         Ankle extends to global ≈ (572, 957) — off canvas / clipped  -->
+    <g transform="translate(594, 800) rotate(9)">
+      <path d="M 0,-74
+               C 28,-72 44,-48 44,-18
+               C 44,12  38,46  24,66
+               C 14,76 -14,76 -24,66
+               C -38,46 -44,12 -44,-18
+               C -44,-48 -28,-72 0,-74 Z"
+            fill="white"/>
+      <rect x="-20" y="64" width="40" height="88" rx="15" fill="white"/>
+    </g>
+
+  </g>
+</svg>

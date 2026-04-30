@@ -1,0 +1,17 @@
+export const Colors = {
+  background: '#0A0A0A',
+  surface: '#1A1A1A',
+  surfaceHigh: '#242424',
+  border: '#2A2A2A',
+  primary: '#00E676',
+  text: '#FFFFFF',
+  textSecondary: '#9E9E9E',
+  textDim: '#555555',
+  live: '#F44336',
+  liveBackground: 'rgba(244,67,54,0.15)',
+  tabBar: '#111111',
+  starter: '#00E676',
+  bench: '#FF9800',
+  notSelected: '#555555',
+  proBadge: '#FFD700',
+} as const
