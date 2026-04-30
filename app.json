@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.pitchin.app",
+      "buildNumber": "1",
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification",
@@ -34,7 +35,7 @@
       [
         "expo-notifications",
         {
-          "mode": "development"
+          "mode": "production"
         }
       ],
       "expo-dev-client",
