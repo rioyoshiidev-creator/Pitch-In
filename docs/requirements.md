@@ -483,6 +483,11 @@ AlarmService.scheduleAlarm(delaySeconds) で AlarmKit にアラームを登録
 - スヌーズ機能（アラーム設定モーダルでON/OFF）
 - 試合中断・中止時のアラームキャンセル
 
+### App Store申請後（審査通過後すぐに対応）
+
+- [ ] `VersionGate.tsx` のApp Store URLを実際のApp IDに更新（現在 `id000000000` のプレースホルダー）
+- [ ] `app.json` の `owner` フィールドがEASアカウントと一致しているか確認
+
 ### v2以降
 
 - 試合詳細画面（タイムライン・詳細パフォーマンス）
