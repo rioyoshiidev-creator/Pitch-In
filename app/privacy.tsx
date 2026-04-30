@@ -4,7 +4,7 @@ import { Stack, router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { Colors } from '../src/constants/colors'
 
-const LAST_UPDATED = '2026年4月26日'
+const LAST_UPDATED = '2026年4月30日'
 
 export default function PrivacyScreen() {
   return (
@@ -34,15 +34,23 @@ export default function PrivacyScreen() {
           {'・試合開始前のアラーム通知\n・スタメン発表・得点のプッシュ通知\n・アプリのサービス改善'}
         </Section>
 
-        <Section title="4. 第三者への提供">
-          {'収集した情報を第三者に販売・提供することはありません。ただし、以下のサービスをインフラとして利用しています。\n\n・Supabase：データベース・バックエンド\n・Expo：プッシュ通知インフラ\n・API-Football：試合データの取得'}
+        <Section title="4. 広告について">
+          {'本アプリは、将来的に広告を表示する場合があります。広告配信にはGoogle AdMobなどの第三者広告サービスを利用する場合があり、広告効果の測定のためデバイス識別子等が利用されることがあります。'}
         </Section>
 
-        <Section title="5. データの保存・削除">
+        <Section title="5. 課金機能について">
+          {'本アプリは、将来的に有料の機能またはサブスクリプションを提供する場合があります。課金はApp Storeを通じて行われ、本アプリが直接クレジットカード情報等を収集することはありません。'}
+        </Section>
+
+        <Section title="6. 第三者への提供">
+          {'収集した情報を第三者に販売・提供することはありません。ただし、以下のサービスをインフラとして利用しています。\n\n・Supabase：データベース・バックエンド\n・Expo：プッシュ通知インフラ\n・API-Football：試合データの取得\n・Google AdMob（将来的）：広告配信'}
+        </Section>
+
+        <Section title="7. データの保存・削除">
           デバイストークンおよびアラーム設定はアプリを削除することで端末から削除されます。サーバー上のデータの削除をご希望の場合はお問い合わせください。
         </Section>
 
-        <Section title="6. お問い合わせ">
+        <Section title="8. お問い合わせ">
           プライバシーに関するお問い合わせは下記までご連絡ください。{'\n\n'}rio.yoshii.dev@gmail.com
         </Section>
       </ScrollView>
