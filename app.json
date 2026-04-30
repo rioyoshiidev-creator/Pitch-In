@@ -31,16 +31,7 @@
         ]
       }
     },
-    "plugins": [
-      [
-        "expo-notifications",
-        {
-          "mode": "production"
-        }
-      ],
-      "expo-dev-client",
-      "expo-router"
-    ],
+    "plugins": [],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

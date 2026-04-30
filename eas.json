@@ -8,7 +8,10 @@
       "distribution": "internal"
     },
     "production": {
-      "distribution": "store"
+      "distribution": "store",
+      "env": {
+        "APP_ENV": "production"
+      }
     }
   },
   "submit": {
