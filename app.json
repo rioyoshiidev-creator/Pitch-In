@@ -17,18 +17,19 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.pitchin.app",
       "buildNumber": "1",
-      "minimumOsVersion": "26.0",
+      "minimumOsVersion": "26.1",
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification",
           "fetch"
         ],
         "NSUserNotificationUsageDescription": "試合開始・選手出場時にアラームで知らせます",
-        "NSAlarmKitUsageDescription": "試合開始・選手出場時にアラームで起こします"
+        "NSAlarmKitUsageDescription": "試合開始・選手出場時にアラームで起こします",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
         "com.apple.security.application-groups": [
-          "group.com.pitchin.app"
+          "group.com.pitchin.pitchin"
         ]
       }
     },
