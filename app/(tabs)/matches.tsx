@@ -421,33 +421,54 @@ const MatchCard = React.memo(function MatchCard({ match, onAlarmPress }: { match
       </View>
 
       {/* アラームボタン */}
-      {((isScheduled && hasFollowedPlayer) || hasBenchInLive) && (
-        <TouchableOpacity
-          style={[styles.alarmBar, alarm && styles.alarmBarSet]}
-          onPress={() => onAlarmPress(match)}
-          activeOpacity={0.75}
-        >
-          <Ionicons
-            name={alarm ? 'alarm' : 'alarm-outline'}
-            size={14}
-            color={alarm ? Colors.background : Colors.textSecondary}
-          />
-          <Text style={[styles.alarmBarText, alarm && styles.alarmBarTextSet]}>
-            {alarm
-              ? isLive
-                ? 'アラーム設定済み（途中出場時）'
-                : `アラーム設定済み（${alarmLabel}）`
-              : isLive
-                ? '途中出場アラームを設定する'
-                : 'アラームを設定する'}
-          </Text>
-          <Ionicons
-            name="chevron-forward"
-            size={12}
-            color={alarm ? Colors.background : Colors.textDim}
-          />
-        </TouchableOpacity>
-      )}
+      {((isScheduled && hasFollowedPlayer) || hasBenchInLive) && (() => {
+        const hoursUntil = (new Date(match.date).getTime() - Date.now()) / 3600000
+        const canSetAlarm = isLive || alarm || hoursUntil <= 24
+
+        if (!canSetAlarm) {
+          const availableAt = new Date(new Date(match.date).getTime() - 24 * 3600000)
+          const month = availableAt.getMonth() + 1
+          const day = availableAt.getDate()
+          const hour = availableAt.getHours().toString().padStart(2, '0')
+          const min = availableAt.getMinutes().toString().padStart(2, '0')
+          return (
+            <View style={[styles.alarmBar, styles.alarmBarLocked]}>
+              <Ionicons name="alarm-outline" size={14} color={Colors.textDim} />
+              <Text style={[styles.alarmBarText, styles.alarmBarTextLocked]}>
+                {month}/{day} {hour}:{min} からアラームを設定できます
+              </Text>
+            </View>
+          )
+        }
+
+        return (
+          <TouchableOpacity
+            style={[styles.alarmBar, alarm && styles.alarmBarSet]}
+            onPress={() => onAlarmPress(match)}
+            activeOpacity={0.75}
+          >
+            <Ionicons
+              name={alarm ? 'alarm' : 'alarm-outline'}
+              size={14}
+              color={alarm ? Colors.background : Colors.textSecondary}
+            />
+            <Text style={[styles.alarmBarText, alarm && styles.alarmBarTextSet]}>
+              {alarm
+                ? isLive
+                  ? 'アラーム設定済み（途中出場時）'
+                  : `アラーム設定済み（${alarmLabel}）`
+                : isLive
+                  ? '途中出場アラームを設定する'
+                  : 'アラームを設定する'}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={12}
+              color={alarm ? Colors.background : Colors.textDim}
+            />
+          </TouchableOpacity>
+        )
+      })()}
     </View>
   )
 })
@@ -803,7 +824,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceHigh,
   },
   alarmBarSet: { backgroundColor: Colors.primary },
+  alarmBarLocked: { backgroundColor: 'transparent' },
   alarmBarText: { flex: 1, fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
+  alarmBarTextLocked: { color: Colors.textDim },
   alarmBarTextSet: { color: Colors.background },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
