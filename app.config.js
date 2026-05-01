@@ -1,4 +1,4 @@
-const { withPodfileProperties } = require('@expo/config-plugins')
+const { withPodfileProperties, withXcodeProject } = require('@expo/config-plugins')
 
 const isProduction = process.env.APP_ENV === 'production'
 
@@ -18,8 +18,21 @@ module.exports = ({ config }) => {
     ],
   }
 
+  // Set CocoaPods platform deployment target
   cfg = withPodfileProperties(cfg, (mod) => {
     mod.modResults['ios.deploymentTarget'] = '26.1'
+    return mod
+  })
+
+  // Set Xcode project deployment target for all build configurations
+  cfg = withXcodeProject(cfg, (mod) => {
+    const configs = mod.modResults.pbxXCBuildConfigurationSection()
+    for (const key in configs) {
+      const buildSettings = configs[key]?.buildSettings
+      if (buildSettings) {
+        buildSettings.IPHONEOS_DEPLOYMENT_TARGET = '26.1'
+      }
+    }
     return mod
   })
 
