@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { AppState, AppStateStatus } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Notifications from 'expo-notifications'
 import { AlarmService } from '../alarm/AlarmService'
@@ -21,12 +22,25 @@ const DeviceContext = createContext<DeviceContextValue>({
 export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const [deviceId, setDeviceId] = useState<string | null>(null)
   const [pushToken, setPushToken] = useState<string | null>(null)
+  const appState = useRef(AppState.currentState)
 
   useEffect(() => {
     // 起動時は許可済みかどうかだけチェック。未確認なら何もしない（オンボーディングに任せる）
     Notifications.getPermissionsAsync().then(({ status }) => {
       if (status === 'granted') setupDevice()
     })
+
+    // フォアグラウンド復帰時に再チェック（設定から通知をONにした場合に対応）
+    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (appState.current !== 'active' && nextState === 'active') {
+        Notifications.getPermissionsAsync().then(({ status }) => {
+          if (status === 'granted') setupDevice()
+        })
+      }
+      appState.current = nextState
+    })
+
+    return () => subscription.remove()
   }, [])
 
   async function setupDevice() {
