@@ -59,9 +59,6 @@ export default function SettingsScreen() {
         <SettingRow label="プライバシーポリシー" onPress={() => router.push('/privacy')} />
         <SettingRow label="お問い合わせ" onPress={() => router.push('/contact')} />
 
-        <Text style={styles.sectionLabel}>デバッグ</Text>
-        <SettingRow label="アラームテスト画面" onPress={() => router.push('/test')} />
-
         <Text style={styles.version}>Pitch-In v1.0.0 (pre-release)</Text>
       </ScrollView>
 

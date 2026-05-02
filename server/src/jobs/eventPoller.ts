@@ -89,23 +89,30 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
     }
 
     if (event.type === 'subst') {
-      // 交代で入る選手
+      // APIは退場・入場それぞれ別イベントとして返すため、
+      // DBのstatusで先発（退場）かベンチ（途中出場）かを判定する
       if (player) {
-        await notifyIfNew(match.id, player.id, 'substitution', player.name)
-        await supabase.from('match_players').upsert(
-          { match_id: match.id, player_id: player.id, status: 'starter', minute_in: event.time.elapsed },
-          { onConflict: 'match_id,player_id' }
-        )
-        await fireBenchAlarms(match.id, player.id)
-      }
-      // 交代で出る選手: minute_out をセット
-      if (event.assist?.id) {
-        const playerOff = japaneseApiIds.get(event.assist.id)
-        if (playerOff) {
+        const { data: mp } = await supabase
+          .from('match_players')
+          .select('status')
+          .eq('match_id', match.id)
+          .eq('player_id', player.id)
+          .maybeSingle()
+
+        if (mp?.status === 'starter') {
+          // 先発選手が退場 → minute_outのみ更新、通知なし
           await supabase.from('match_players')
             .update({ minute_out: event.time.elapsed })
             .eq('match_id', match.id)
-            .eq('player_id', playerOff.id)
+            .eq('player_id', player.id)
+        } else {
+          // ベンチ選手が途中出場 → 通知 + DB更新 + アラーム発火
+          await notifyIfNew(match.id, player.id, 'substitution', player.name)
+          await supabase.from('match_players').upsert(
+            { match_id: match.id, player_id: player.id, status: 'starter', minute_in: event.time.elapsed },
+            { onConflict: 'match_id,player_id' }
+          )
+          await fireBenchAlarms(match.id, player.id)
         }
       }
     }
@@ -117,15 +124,12 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
 }
 
 async function notifyIfNew(matchId: string, playerId: string, eventType: 'goal' | 'substitution' | 'assist', playerName: string) {
-  const { data: logged } = await supabase
+  // ログを先に挿入して二重送信を防ぐ（unique constraint: match_id, player_id, event_type）
+  const { error } = await supabase
     .from('notification_log')
-    .select('id')
-    .eq('match_id', matchId)
-    .eq('player_id', playerId)
-    .eq('event_type', eventType)
-    .single()
+    .insert({ match_id: matchId, player_id: playerId, event_type: eventType })
 
-  if (logged) return
+  if (error) return  // 既に送信済み（unique violation）またはエラー
 
   const notifyField = eventType === 'goal' ? 'notify_goal'
     : eventType === 'assist' ? 'notify_assist'
@@ -144,8 +148,6 @@ async function notifyIfNew(matchId: string, playerId: string, eventType: 'goal' 
   if (tokens.length > 0) {
     await sendPushNotifications({ pushTokens: tokens, playerName, eventType, matchId })
   }
-
-  await supabase.from('notification_log').insert({ match_id: matchId, player_id: playerId, event_type: eventType })
 }
 
 export async function fireBenchAlarms(matchId: string, playerId: string) {

@@ -16,32 +16,32 @@ function buildMessage(playerName: string, eventType: PushEventType): { title: st
     case 'starter':
       return {
         title: 'スタメン発表',
-        body: `${playerName} が先発出場します`,
+        body: `${playerName}選手が先発出場します`,
       }
     case 'bench':
       return {
         title: 'スタメン発表',
-        body: `${playerName} は控えスタートです`,
+        body: `${playerName}選手は控えスタートです`,
       }
     case 'not_called_up':
       return {
         title: 'スタメン発表',
-        body: `${playerName} は今節の招集外です`,
+        body: `${playerName}選手は今節の招集外です`,
       }
     case 'substitution':
       return {
         title: '途中出場',
-        body: `${playerName} が途中出場しました`,
+        body: `${playerName}選手が途中出場しました`,
       }
     case 'goal':
       return {
         title: 'ゴール',
-        body: `${playerName} が得点しました`,
+        body: `${playerName}選手が得点しました`,
       }
     case 'assist':
       return {
         title: 'アシスト',
-        body: `${playerName} がアシストしました`,
+        body: `${playerName}選手がアシストしました`,
       }
   }
 }
