@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.pitchin.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "minimumOsVersion": "26.1",
       "infoPlist": {
         "UIBackgroundModes": [
@@ -31,7 +31,8 @@
         "com.apple.security.application-groups": [
           "group.com.pitchin.pitchin"
         ]
-      }
+      },
+      "appleTeamId": "9FW877MVVZ"
     },
     "plugins": [],
     "android": {
