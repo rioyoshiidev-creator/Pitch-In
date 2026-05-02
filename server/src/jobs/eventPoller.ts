@@ -89,30 +89,24 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
     }
 
     if (event.type === 'subst') {
-      // APIは退場・入場それぞれ別イベントとして返すため、
-      // DBのstatusで先発（退場）かベンチ（途中出場）かを判定する
+      // API Football: event.player = 退場選手（出る）、event.assist = 途中出場選手（入る）
+      // 退場選手: minute_outのみ更新、通知なし
       if (player) {
-        const { data: mp } = await supabase
-          .from('match_players')
-          .select('status')
+        await supabase.from('match_players')
+          .update({ minute_out: event.time.elapsed })
           .eq('match_id', match.id)
           .eq('player_id', player.id)
-          .maybeSingle()
-
-        if (mp?.status === 'starter') {
-          // 先発選手が退場 → minute_outのみ更新、通知なし
-          await supabase.from('match_players')
-            .update({ minute_out: event.time.elapsed })
-            .eq('match_id', match.id)
-            .eq('player_id', player.id)
-        } else {
-          // ベンチ選手が途中出場 → 通知 + DB更新 + アラーム発火
-          await notifyIfNew(match.id, player.id, 'substitution', player.name)
+      }
+      // 途中出場選手: 通知 + DB更新 + アラーム発火
+      if (event.assist?.id) {
+        const playerIn = japaneseApiIds.get(event.assist.id)
+        if (playerIn) {
+          await notifyIfNew(match.id, playerIn.id, 'substitution', playerIn.name)
           await supabase.from('match_players').upsert(
-            { match_id: match.id, player_id: player.id, status: 'starter', minute_in: event.time.elapsed },
+            { match_id: match.id, player_id: playerIn.id, status: 'starter', minute_in: event.time.elapsed },
             { onConflict: 'match_id,player_id' }
           )
-          await fireBenchAlarms(match.id, player.id)
+          await fireBenchAlarms(match.id, playerIn.id)
         }
       }
     }
