@@ -187,7 +187,13 @@ function SearchTab({
   allPlayers: FollowedPlayer[]
   loading: boolean
 }) {
+  const { getAlarmsForPlayer, deleteAlarm } = useAlarms()
   const [searchQuery, setSearchQuery] = useState('')
+
+  const handleRemove = (id: string) => {
+    getAlarmsForPlayer(id).forEach((a) => deleteAlarm(a.id))
+    onRemove(id)
+  }
 
   const displayPlayers = allPlayers.filter((p) => {
     if (!searchQuery) return true
@@ -225,7 +231,7 @@ function SearchTab({
                 key={player.id}
                 player={player}
                 followed={followed}
-                onAction={() => followed ? onRemove(player.id) : onAdd(player)}
+                onAction={() => followed ? handleRemove(player.id) : onAdd(player)}
                 disabled={!followed && isFull}
               />
             )
