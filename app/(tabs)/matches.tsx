@@ -497,7 +497,7 @@ function PlayerCell({
     '不明'
 
   const hasSub = info.minuteIn != null || info.minuteOut != null
-  const subColor = info.status === 'starter' ? Colors.starter : Colors.bench
+  const subColor = info.status === 'starter' && info.minuteIn == null ? Colors.starter : Colors.bench
   const subTimeText =
     info.minuteIn != null && info.minuteOut != null
       ? `${info.minuteIn}'〜${info.minuteOut}'`
