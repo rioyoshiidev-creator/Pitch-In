@@ -141,16 +141,22 @@ export async function sendLineupNotifications(matchId: string, matchDate: string
 async function fireAlarms(matchId: string, matchDate: string, starterIds: Set<string>) {
   const { data: alarms } = await supabase
     .from('alarms')
-    .select('id, alarm_timing, minutes_before, snooze, selected_player_ids, player_ids, devices(push_token)')
+    .select('id, device_id, alarm_timing, minutes_before, snooze, selected_player_ids, devices(push_token)')
     .eq('match_id', matchId)
     .eq('is_enabled', true)
 
   for (const alarm of alarms ?? []) {
     const selectedIds = alarm.selected_player_ids as string[] | null
-    const playerIds = alarm.player_ids as string[] | null
 
-    // selectedIds が設定されていればそちら優先、未設定なら player_ids（フォロー選手全員）で判定
-    const idsToCheck = selectedIds ?? playerIds
+    let idsToCheck: string[] | null = selectedIds
+    if (!idsToCheck) {
+      const { data: fp } = await supabase
+        .from('followed_players')
+        .select('player_id')
+        .eq('device_id', alarm.device_id)
+      idsToCheck = (fp ?? []).map((f) => f.player_id)
+    }
+
     if (idsToCheck && !idsToCheck.some((id) => starterIds.has(id))) continue
 
     const token = (alarm.devices as unknown as { push_token: string } | null)?.push_token
