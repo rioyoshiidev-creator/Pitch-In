@@ -96,16 +96,13 @@ export async function sendLineupNotifications(matchId: string, matchDate: string
 
     const eventType = isStarter ? 'starter' : isBench ? 'bench' : 'not_called_up'
 
-    // 通知済みチェック
-    const { data: logged } = await supabase
-      .from('notification_log')
-      .select('id')
-      .eq('match_id', matchId)
-      .eq('player_id', mp.player_id)
-      .eq('event_type', eventType)
-      .single()
-
-    if (logged) continue
+    // INSERT先行：失敗（unique制約違反）なら送信済みのためスキップ
+    const { error: logError } = await supabase.from('notification_log').insert({
+      match_id: matchId,
+      player_id: mp.player_id,
+      event_type: eventType,
+    })
+    if (logError) continue
 
     // フォロー中デバイスを取得（notify_lineup=trueのみ）
     const { data: followers } = await supabase
@@ -123,13 +120,6 @@ export async function sendLineupNotifications(matchId: string, matchDate: string
     }
 
     if (isStarter) starterIds.add(mp.player_id)
-
-    // 通知ログ記録
-    await supabase.from('notification_log').insert({
-      match_id: matchId,
-      player_id: mp.player_id,
-      event_type: eventType,
-    })
   }
 
   // スタメンが1人でもいる場合にアラーム発火
