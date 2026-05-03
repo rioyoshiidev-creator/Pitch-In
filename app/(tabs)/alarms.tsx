@@ -58,14 +58,7 @@ function isAlarmEditable(alarm: Alarm, matches: Match[]): boolean {
   if (alarm.subOnly) return false
   const match = matches.find((m) => m.id === alarm.matchId)
   if (!match) return true
-  const lineupAnnounced = match.japanesePlayers.some((p) => p.status !== 'unknown')
-  if (!lineupAnnounced) return true
-  const idsToCheck = alarm.selectedPlayerIds ?? alarm.playerIds ?? []
-  if (idsToCheck.length === 0) return true
-  return idsToCheck.some((id) => {
-    const p = match.japanesePlayers.find((jp) => jp.player.id === id)
-    return p?.status === 'bench'
-  })
+  return !match.japanesePlayers.some((p) => p.status !== 'unknown')
 }
 
 export default function AlarmsScreen() {
