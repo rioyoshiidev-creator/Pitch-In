@@ -500,10 +500,10 @@ function PlayerCell({
   const subColor = info.status === 'starter' ? Colors.starter : Colors.bench
   const subTimeText =
     info.minuteIn != null && info.minuteOut != null
-      ? `${info.minuteOut}'〜${info.minuteIn}'`
-      : info.minuteOut != null
-        ? `${info.minuteOut}'〜`
-        : `〜${info.minuteIn}'`
+      ? `${info.minuteIn}'〜${info.minuteOut}'`
+      : info.minuteIn != null
+        ? `${info.minuteIn}'〜`
+        : `〜${info.minuteOut}'`
 
   const statsItems: string[] = []
   if (info.goalMinutes.length > 0) {
