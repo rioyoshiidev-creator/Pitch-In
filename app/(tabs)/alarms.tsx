@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { Colors } from '../../src/constants/colors'
 import { useAlarms } from '../../src/context/AlarmContext'
+import { useFollowedPlayers } from '../../src/context/FollowedPlayersContext'
 import { formatMatchDate, formatMatchTime, formatAlarmTime, isMatchOver } from '../../src/utils/date'
 import type { Alarm, AlarmTiming } from '../../src/types'
 
@@ -113,6 +114,7 @@ function AlarmCard({
   onDelete: () => void
   onEdit: () => void
 }) {
+  const { followedPlayers } = useFollowedPlayers()
   const matchTimeStr = formatMatchTime(alarm.matchDate)
   const matchDateStr = formatMatchDate(alarm.matchDate)
   const live = isAlarmLive(alarm)
@@ -130,15 +132,26 @@ function AlarmCard({
       ? '試合開始時にアラーム'
       : `試合開始${alarm.minutesBefore}分前にアラーム`
 
+  const targetIds = alarm.selectedPlayerIds ?? alarm.playerIds ?? []
+  const playerNames = targetIds
+    .map((id) => followedPlayers.find((p) => p.id === id)?.name)
+    .filter((n): n is string => !!n)
+
   return (
     <View style={styles.card}>
       {/* 時刻 + 編集ボタン */}
       <View style={styles.cardTop}>
         <View style={styles.timeBlock}>
-          <Text style={[styles.alarmTime, isLineup && styles.alarmTimeLineup]}>
-            {timeDisplay}
-          </Text>
-          <Text style={styles.alarmSub}>{timingLabel}</Text>
+          {alarm.subOnly ? (
+            <Text style={styles.alarmTimeLineup}>途中出場時にアラーム</Text>
+          ) : (
+            <>
+              <Text style={[styles.alarmTime, isLineup && styles.alarmTimeLineup]}>
+                {timeDisplay}
+              </Text>
+              <Text style={styles.alarmSub}>{timingLabel}</Text>
+            </>
+          )}
         </View>
         <TouchableOpacity style={styles.editBtn} onPress={onEdit} activeOpacity={0.75}>
           <Ionicons name="pencil-outline" size={14} color={Colors.textSecondary} />
@@ -157,7 +170,10 @@ function AlarmCard({
           )}
         </View>
         <Text style={styles.matchMeta}>{matchDateStr} {matchTimeStr} · {alarm.league}</Text>
-        {alarm.notifySubstitution && (
+        {playerNames.length > 0 && (
+          <Text style={styles.playerNames}>{playerNames.join('・')}</Text>
+        )}
+        {!alarm.subOnly && alarm.notifySubstitution && (
           <View style={styles.subBadge}>
             <Ionicons name="swap-horizontal" size={11} color={Colors.bench} />
             <Text style={styles.subBadgeText}>途中出場時もアラーム</Text>
@@ -347,6 +363,7 @@ const styles = StyleSheet.create({
   },
   liveText: { fontSize: 10, fontWeight: '800', color: Colors.live },
   matchMeta: { fontSize: 12, color: Colors.textSecondary },
+  playerNames: { fontSize: 12, color: Colors.text, fontWeight: '600', marginTop: 2 },
   subBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6,
     alignSelf: 'flex-start', backgroundColor: 'rgba(255,152,0,0.12)',

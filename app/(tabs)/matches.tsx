@@ -628,6 +628,7 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
       alarmTiming: (isLive || lineupAnnounced) ? 'before_kickoff' : selectedOption.alarmTiming,
       minutesBefore: (isLive || lineupAnnounced) ? 0 : selectedOption.minutesBefore,
       notifySubstitution: (isLive || lineupAnnounced) ? true : notifySubstitution,
+      subOnly: isLive || lineupAnnounced,
       snooze,
       playerIds: followedPlayerIds,
       selectedPlayerIds: (isLive || lineupAnnounced)

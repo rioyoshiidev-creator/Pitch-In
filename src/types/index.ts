@@ -63,5 +63,6 @@ export interface Alarm {
   snooze: boolean
   playerIds?: string[]          // この試合の日本人選手ID一覧（フォロー解除時の削除判定に使用）
   selectedPlayerIds?: string[]  // アラーム対象として選択した選手ID（未設定=全員）
+  subOnly?: boolean             // スタメン発表後に設定→途中出場のみアラーム
   serverId?: string             // Supabase上のアラームUUID（サーバー同期後に設定）
 }
