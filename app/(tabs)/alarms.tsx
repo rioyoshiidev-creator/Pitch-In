@@ -15,8 +15,9 @@ import { Ionicons } from '@expo/vector-icons'
 import { Colors } from '../../src/constants/colors'
 import { useAlarms } from '../../src/context/AlarmContext'
 import { useFollowedPlayers } from '../../src/context/FollowedPlayersContext'
+import { fetchMatches } from '../../src/lib/api'
 import { formatMatchDate, formatMatchTime, formatAlarmTime, isMatchOver } from '../../src/utils/date'
-import type { Alarm, AlarmTiming } from '../../src/types'
+import type { Alarm, AlarmTiming, Match } from '../../src/types'
 
 type AlarmOption = { label: string; alarmTiming: AlarmTiming; minutesBefore: number }
 const ALARM_OPTIONS: AlarmOption[] = [
@@ -53,10 +54,29 @@ function isAlarmLive(alarm: Alarm): boolean {
   return matchTime <= Date.now() && !isMatchOver(alarm.matchDate)
 }
 
+function isAlarmEditable(alarm: Alarm, matches: Match[]): boolean {
+  if (alarm.subOnly) return false
+  const match = matches.find((m) => m.id === alarm.matchId)
+  if (!match) return true
+  const lineupAnnounced = match.japanesePlayers.some((p) => p.status !== 'unknown')
+  if (!lineupAnnounced) return true
+  const idsToCheck = alarm.selectedPlayerIds ?? alarm.playerIds ?? []
+  if (idsToCheck.length === 0) return true
+  return idsToCheck.some((id) => {
+    const p = match.japanesePlayers.find((jp) => jp.player.id === id)
+    return p?.status === 'bench'
+  })
+}
+
 export default function AlarmsScreen() {
   const { alarms, toggleSnooze, deleteAlarm, addAlarm } = useAlarms()
   const [editTarget, setEditTarget] = useState<Alarm | null>(null)
+  const [matches, setMatches] = useState<Match[]>([])
   const activeAlarms = alarms.filter((a) => !isMatchOver(a.matchDate))
+
+  useEffect(() => {
+    fetchMatches().then(({ matches }) => setMatches(matches)).catch(() => {})
+  }, [])
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -78,6 +98,7 @@ export default function AlarmsScreen() {
           <AlarmCard
             key={alarm.id}
             alarm={alarm}
+            canEdit={isAlarmEditable(alarm, matches)}
             onToggleSnooze={() => toggleSnooze(alarm.id)}
             onDelete={() => deleteAlarm(alarm.id)}
             onEdit={() => setEditTarget(alarm)}
@@ -105,11 +126,13 @@ export default function AlarmsScreen() {
 
 function AlarmCard({
   alarm,
+  canEdit,
   onToggleSnooze,
   onDelete,
   onEdit,
 }: {
   alarm: Alarm
+  canEdit: boolean
   onToggleSnooze: () => void
   onDelete: () => void
   onEdit: () => void
@@ -143,7 +166,7 @@ function AlarmCard({
       <View style={styles.cardTop}>
         <View style={styles.timeBlock}>
           {alarm.subOnly ? (
-            <Text style={styles.alarmTimeLineup}>途中出場時にアラーム</Text>
+            <Text style={[styles.alarmTimeLineup, { color: Colors.text }]}>途中出場時にアラーム</Text>
           ) : (
             <>
               <Text style={[styles.alarmTime, isLineup && styles.alarmTimeLineup]}>
@@ -153,10 +176,12 @@ function AlarmCard({
             </>
           )}
         </View>
-        <TouchableOpacity style={styles.editBtn} onPress={onEdit} activeOpacity={0.75}>
-          <Ionicons name="pencil-outline" size={14} color={Colors.textSecondary} />
-          <Text style={styles.editBtnText}>編集</Text>
-        </TouchableOpacity>
+        {canEdit && (
+          <TouchableOpacity style={styles.editBtn} onPress={onEdit} activeOpacity={0.75}>
+            <Ionicons name="pencil-outline" size={14} color={Colors.textSecondary} />
+            <Text style={styles.editBtnText}>編集</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 試合情報 */}
