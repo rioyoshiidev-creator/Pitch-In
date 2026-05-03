@@ -346,9 +346,13 @@ const MatchCard = React.memo(function MatchCard({ match, onAlarmPress }: { match
   const awayPlayers = match.japanesePlayers.filter((p) => p.player.team === match.awayTeam).sort(byStatus)
 
   const hasFollowedPlayer = match.japanesePlayers.some((p) => isFollowed(p.player.id))
-  const hasBenchInLive = isLive && match.japanesePlayers.some(
-    (p) => isFollowed(p.player.id) && (p.status === 'bench' || p.status === 'unknown')
+  const lineupAnnounced = match.japanesePlayers.some(
+    (p) => isFollowed(p.player.id) && p.status !== 'unknown'
   )
+  const hasBenchPlayer = match.japanesePlayers.some(
+    (p) => isFollowed(p.player.id) && p.status === 'bench'
+  )
+  const hasBenchInLive = isLive && hasBenchPlayer
 
   const alarmLabel = alarm
     ? alarm.alarmTiming === 'lineup'
@@ -421,7 +425,7 @@ const MatchCard = React.memo(function MatchCard({ match, onAlarmPress }: { match
       </View>
 
       {/* アラームボタン */}
-      {((isScheduled && hasFollowedPlayer) || hasBenchInLive) && (() => {
+      {((isScheduled && ((!lineupAnnounced && hasFollowedPlayer) || hasBenchPlayer)) || hasBenchInLive) && (() => {
         const hoursUntil = (new Date(match.date).getTime() - Date.now()) / 3600000
         const canSetAlarm = isLive || alarm || hoursUntil <= 24
 
@@ -454,10 +458,10 @@ const MatchCard = React.memo(function MatchCard({ match, onAlarmPress }: { match
             />
             <Text style={[styles.alarmBarText, alarm && styles.alarmBarTextSet]}>
               {alarm
-                ? isLive
+                ? isLive || lineupAnnounced
                   ? 'アラーム設定済み（途中出場時）'
                   : `アラーム設定済み（${alarmLabel}）`
-                : isLive
+                : isLive || lineupAnnounced
                   ? '途中出場アラームを設定する'
                   : 'アラームを設定する'}
             </Text>
@@ -568,11 +572,19 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
 
   const followedPlayers = match.japanesePlayers.filter((p) => isFollowed(p.player.id))
   const followedPlayerIds = followedPlayers.map((p) => p.player.id)
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(
-    existing?.selectedPlayerIds ?? followedPlayerIds
-  )
+  const lineupAnnounced = followedPlayers.some((p) => p.status !== 'unknown')
+  const selectablePlayers = lineupAnnounced
+    ? followedPlayers.filter((p) => p.status === 'bench')
+    : followedPlayers
+  const selectableIds = selectablePlayers.map((p) => p.player.id)
+
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(() => {
+    const base = existing?.selectedPlayerIds ?? selectableIds
+    if (lineupAnnounced) return base.filter((id) => selectableIds.includes(id))
+    return base
+  })
   const togglePlayer = (id: string) => {
-    if (followedPlayers.length <= 1) return
+    if (selectablePlayers.length <= 1) return
     setSelectedPlayerIds((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     )
@@ -613,12 +625,14 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
       awayTeam: match.awayTeam,
       league: match.league,
       matchDate: match.date,
-      alarmTiming: isLive ? 'before_kickoff' : selectedOption.alarmTiming,
-      minutesBefore: isLive ? 0 : selectedOption.minutesBefore,
-      notifySubstitution: isLive ? true : notifySubstitution,
+      alarmTiming: (isLive || lineupAnnounced) ? 'before_kickoff' : selectedOption.alarmTiming,
+      minutesBefore: (isLive || lineupAnnounced) ? 0 : selectedOption.minutesBefore,
+      notifySubstitution: (isLive || lineupAnnounced) ? true : notifySubstitution,
       snooze,
       playerIds: followedPlayerIds,
-      selectedPlayerIds,
+      selectedPlayerIds: (isLive || lineupAnnounced)
+        ? selectedPlayerIds.filter((id) => selectableIds.includes(id))
+        : selectedPlayerIds,
     }
     addAlarm(alarm)
     handleClose()
@@ -645,24 +659,35 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
         <Text style={styles.modalLabel}>アラームをする選手</Text>
         <View style={styles.playerSelectGrid}>
           {followedPlayers.map((info) => {
+            const isDisabled = lineupAnnounced && info.status !== 'bench'
             const active = selectedPlayerIds.includes(info.player.id)
-            const disabled = followedPlayers.length <= 1
+            const statusSuffix = isDisabled
+              ? info.status === 'not_selected' ? ' (招集外)' : ' (先発)'
+              : ''
             return (
               <TouchableOpacity
                 key={info.player.id}
-                style={[styles.playerSelectChip, active && styles.playerSelectChipActive]}
-                onPress={() => togglePlayer(info.player.id)}
-                activeOpacity={disabled ? 1 : 0.75}
+                style={[
+                  styles.playerSelectChip,
+                  active && !isDisabled && styles.playerSelectChipActive,
+                  isDisabled && styles.playerSelectChipDisabled,
+                ]}
+                onPress={() => !isDisabled && togglePlayer(info.player.id)}
+                activeOpacity={isDisabled ? 1 : 0.75}
               >
-                <Text style={[styles.playerSelectChipText, active && styles.playerSelectChipTextActive]}>
-                  {info.player.name}
+                <Text style={[
+                  styles.playerSelectChipText,
+                  active && !isDisabled && styles.playerSelectChipTextActive,
+                  isDisabled && styles.playerSelectChipTextDisabled,
+                ]}>
+                  {info.player.name}{statusSuffix}
                 </Text>
               </TouchableOpacity>
             )
           })}
         </View>
 
-        {!isLive && (
+        {!isLive && !lineupAnnounced && (
           <>
             <Text style={styles.modalLabel}>先発時のアラームのタイミング</Text>
             <View style={styles.optionGrid}>
@@ -690,14 +715,18 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
           </>
         )}
 
-        {isLive && (
+        {(isLive || lineupAnnounced) && (
           <View style={styles.liveNotice}>
             <Ionicons name="information-circle" size={14} color={Colors.textSecondary} />
-            <Text style={styles.liveNoticeText}>試合中のためフォロー選手の途中出場時のアラームのみを設定できます</Text>
+            <Text style={styles.liveNoticeText}>
+              {isLive
+                ? '試合中のためフォロー選手の途中出場時のアラームのみを設定できます'
+                : 'スタメンが発表されました。ベンチ選手の途中出場時のアラームを設定できます'}
+            </Text>
           </View>
         )}
 
-        {!isLive && (
+        {!isLive && !lineupAnnounced && (
           <>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabelText}>途中出場時もアラーム</Text>
@@ -881,8 +910,10 @@ const styles = StyleSheet.create({
   playerSelectGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   playerSelectChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: 'transparent' },
   playerSelectChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  playerSelectChipDisabled: { opacity: 0.35, backgroundColor: Colors.surfaceHigh, borderColor: Colors.border },
   playerSelectChipText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   playerSelectChipTextActive: { color: Colors.background },
+  playerSelectChipTextDisabled: { color: Colors.textDim },
 
   liveNotice: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 6,
