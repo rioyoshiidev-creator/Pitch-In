@@ -485,13 +485,15 @@ function PlayerCell({
   followed: boolean
 }) {
   const statusColor =
-    info.status === 'starter' ? Colors.starter :
+    info.status === 'starter' && info.minuteIn == null ? Colors.starter :
+    info.status === 'starter' && info.minuteIn != null ? Colors.bench :
     info.status === 'bench' ? Colors.bench :
     info.status === 'not_selected' ? Colors.notSelected :
     Colors.textSecondary
 
   const statusLabel =
-    info.status === 'starter' ? '先発' :
+    info.status === 'starter' && info.minuteIn == null ? '先発' :
+    info.status === 'starter' && info.minuteIn != null ? '途中出場' :
     info.status === 'bench' ? '控え' :
     info.status === 'not_selected' ? '招集外' :
     '不明'
