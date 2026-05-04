@@ -77,8 +77,9 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
   }
 
   // 通知 & 交代処理
-  // 現在のイベントで実際に途中出場した日本人選手IDを収集（誤データ修正用）
-  const actualSubIds = new Set<string>()
+  // 現在のイベントで実際に交代した日本人選手IDを収集（誤データ修正用）
+  const actualSubIds = new Set<string>()   // 途中出場（入った）
+  const actualOutIds = new Set<string>()   // 退場（出た）
 
   for (const event of events) {
     const player = japaneseApiIds.get(event.player?.id)
@@ -95,6 +96,7 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
       // API Football: event.player = 退場選手（出る）、event.assist = 途中出場選手（入る）
       // 退場選手: minute_outのみ更新、通知なし
       if (player) {
+        actualOutIds.add(player.id)
         await supabase.from('match_players')
           .update({ minute_out: event.time.elapsed })
           .eq('match_id', match.id)
@@ -127,6 +129,22 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
     if (!actualSubIds.has(row.player_id)) {
       await supabase.from('match_players')
         .update({ status: 'bench', minute_in: null })
+        .eq('match_id', match.id)
+        .eq('player_id', row.player_id)
+    }
+  }
+
+  // 誤データ修正: minute_out が設定されているが現在のイベントに退場記録がない選手をリセット
+  const { data: wrongOuts } = await supabase
+    .from('match_players')
+    .select('player_id')
+    .eq('match_id', match.id)
+    .not('minute_out', 'is', null)
+
+  for (const row of wrongOuts ?? []) {
+    if (!actualOutIds.has(row.player_id)) {
+      await supabase.from('match_players')
+        .update({ minute_out: null })
         .eq('match_id', match.id)
         .eq('player_id', row.player_id)
     }
