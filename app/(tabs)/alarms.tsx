@@ -309,7 +309,7 @@ function AlarmEditModal({
         {live && (
           <View style={styles.liveNotice}>
             <Ionicons name="information-circle" size={14} color={Colors.textSecondary} />
-            <Text style={styles.liveNoticeText}>試合中のためベンチ選手の途中出場時のみアラームを設定できます</Text>
+            <Text style={styles.liveNoticeText}>試合中のため控えの選手の途中出場時のみアラームを設定できます</Text>
           </View>
         )}
 

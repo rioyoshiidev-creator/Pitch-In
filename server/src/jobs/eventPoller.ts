@@ -7,11 +7,11 @@ export async function pollLiveEvents() {
   const now = new Date()
   const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000)
 
-  // status=live の試合 + キックオフ時刻を過ぎた scheduled 試合（遅延対応）
+  // status=live の試合 + キックオフ時刻を過ぎた scheduled/postponed 試合（遅延・延期対応）
   const { data: matches } = await supabase
     .from('matches')
     .select('id, api_fixture_id, home_team_id, away_team_id, status')
-    .or(`status.eq.live,and(status.eq.scheduled,date.lte.${now.toISOString()},date.gte.${threeHoursAgo.toISOString()})`)
+    .or(`status.eq.live,and(status.eq.scheduled,date.lte.${now.toISOString()},date.gte.${threeHoursAgo.toISOString()}),and(status.eq.postponed,date.lte.${now.toISOString()},date.gte.${threeHoursAgo.toISOString()})`)
 
   if (!matches || matches.length === 0) return
 

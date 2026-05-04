@@ -488,6 +488,20 @@ AlarmService.scheduleAlarm(delaySeconds) で AlarmKit にアラームを登録
 - [ ] `VersionGate.tsx` のApp Store URLを実際のApp IDに更新（現在 `id000000000` のプレースホルダー）
 - [ ] `app.json` の `owner` フィールドがEASアカウントと一致しているか確認
 
+### 正式リリース前に対応すること
+
+#### 外部API（API-Football）の情報が後から修正された場合の対応
+
+**背景:** API-Football が誤ったデータを返した後に正しい値に更新されることがある（交代選手の誤認識、スタメン情報の間違いなど）。現状は一度書き込んだ `match_players` が修正されず、アプリ上の表示が誤ったままになる。
+
+**通知・アラームについて:** `notification_log` / `sub_alarm_fired` による二重送信防止があるため、誤った情報に基づく通知は「仕方ない」として許容する。再送はしない。
+
+**必要な対応:**
+- [ ] ライブ試合中、定期的に全イベント・ラインナップを再取得して `match_players` を現在のAPIデータで上書きする `reconcileLiveMatchPlayers` ジョブを追加（5〜10分ごと）
+- [ ] reconcile処理では通知・アラームのコードを呼ばない（表示データの更新のみ）
+- [ ] 誤って追加された選手レコードの削除も考慮（upsertだけでは消えないため DELETE が必要）
+- [ ] `lineup_fetched = true` の試合でも reconcile は実行できるようにする（`lineup_fetched` は「通知を送ったか」の管理にとどめ、データ更新とは分離する）
+
 ### v2以降
 
 - 試合詳細画面（タイムライン・詳細パフォーマンス）

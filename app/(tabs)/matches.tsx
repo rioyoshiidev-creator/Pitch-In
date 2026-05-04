@@ -722,7 +722,7 @@ function AlarmModal({ match, onClose }: { match: Match; onClose: () => void }) {
             <Text style={styles.liveNoticeText}>
               {isLive
                 ? '試合中のためフォロー選手の途中出場時のアラームのみを設定できます'
-                : 'スタメンが発表されました。ベンチ選手の途中出場時のアラームを設定できます'}
+                : 'スタメンが発表されました。控えの選手の途中出場時のアラームを設定できます'}
             </Text>
           </View>
         )}
