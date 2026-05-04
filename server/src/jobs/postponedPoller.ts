@@ -11,12 +11,14 @@ function toMatchStatus(short: string): string {
 /**
  * 延期試合の再スケジュール監視（5分ごとに呼ばれる）
  *
- * 元の試合時刻から2時間以内: 高頻度（5分ごと）でAPIチェック
- * 2時間を過ぎたもの: scheduleSync（日次）に任せてここではスキップ
+ * 元の試合時刻からの経過時間によって監視頻度を変える:
+ *   0〜2時間:  毎回チェック（実質5分ごと）
+ *   2〜8時間:  毎時0〜4分のみチェック（実質1時間ごと）
+ *   8時間以降: スキップ → scheduleSync（日次）に委ねる
  */
 export async function pollPostponed() {
   const now = new Date()
-  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
+  const isHourlyWindow = now.getMinutes() < 5
 
   const { data: matches } = await supabase
     .from('matches')
@@ -25,18 +27,22 @@ export async function pollPostponed() {
 
   if (!matches || matches.length === 0) return
 
-  // 元の試合時刻から2時間以内のものだけチェック
-  const recentMatches = matches.filter((m) => new Date(m.date) >= twoHoursAgo)
-  if (recentMatches.length === 0) return
+  const targets = matches.filter((m) => {
+    const elapsedMs = now.getTime() - new Date(m.date).getTime()
+    if (elapsedMs < 0) return false                           // まだキックオフ前（通常はありえない）
+    if (elapsedMs < 2 * 60 * 60 * 1000) return true          // 2時間以内: 毎回
+    if (elapsedMs < 8 * 60 * 60 * 1000) return isHourlyWindow // 2〜8時間: 毎時0〜4分のみ
+    return false                                              // 8時間超: スキップ
+  })
 
-  for (const match of recentMatches) {
+  if (targets.length === 0) return
+
+  for (const match of targets) {
     try {
       const fixture = await fetchFixture(match.api_fixture_id)
       if (!fixture) continue
 
       const newStatus = toMatchStatus(fixture.fixture.status.short)
-
-      // まだ延期状態なら何もしない
       if (newStatus === 'postponed') continue
 
       await supabase.from('matches').update({
