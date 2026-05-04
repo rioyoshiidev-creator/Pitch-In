@@ -10,6 +10,7 @@ import { syncMatchSchedule } from './jobs/scheduleSync'
 import { syncTeams, syncJapanesePlayers } from './jobs/syncTeamsAndPlayers'
 import { pollLineups } from './jobs/lineupPoller'
 import { pollLiveEvents } from './jobs/eventPoller'
+import { pollPostponed } from './jobs/postponedPoller'
 
 const app = express()
 app.use(express.json())
@@ -50,9 +51,14 @@ cron.schedule('* * * * *', async () => {
   await pollLiveEvents()
 })
 
+// 延期試合の再スケジュール確認（30分ごと）
+cron.schedule('*/30 * * * *', async () => {
+  await pollPostponed()
+})
+
 
 const PORT = process.env.PORT ?? 3000
 app.listen(PORT, () => {
   console.log(`[server] 起動完了 http://localhost:${PORT}`)
-  console.log('[server] cron: scheduleSync=1回/日(09:00), lineup=5分ごと, events=1分ごと')
+  console.log('[server] cron: scheduleSync=1回/日(09:00), lineup=5分ごと, events=1分ごと, postponed=30分ごと')
 })
