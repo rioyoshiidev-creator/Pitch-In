@@ -77,6 +77,9 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
   }
 
   // 通知 & 交代処理
+  // 現在のイベントで実際に途中出場した日本人選手IDを収集（誤データ修正用）
+  const actualSubIds = new Set<string>()
+
   for (const event of events) {
     const player = japaneseApiIds.get(event.player?.id)
 
@@ -101,6 +104,7 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
       if (event.assist?.id) {
         const playerIn = japaneseApiIds.get(event.assist.id)
         if (playerIn) {
+          actualSubIds.add(playerIn.id)
           await notifyIfNew(match.id, playerIn.id, 'substitution', playerIn.name)
           await supabase.from('match_players').upsert(
             { match_id: match.id, player_id: playerIn.id, status: 'starter', minute_in: event.time.elapsed },
@@ -109,6 +113,22 @@ async function processLiveMatch(match: { id: string; api_fixture_id: number }) {
           await fireBenchAlarms(match.id, playerIn.id)
         }
       }
+    }
+  }
+
+  // 誤データ修正: 途中出場扱いだが現在のイベントに存在しない選手を控えに戻す
+  const { data: wrongSubs } = await supabase
+    .from('match_players')
+    .select('player_id')
+    .eq('match_id', match.id)
+    .not('minute_in', 'is', null)
+
+  for (const row of wrongSubs ?? []) {
+    if (!actualSubIds.has(row.player_id)) {
+      await supabase.from('match_players')
+        .update({ status: 'bench', minute_in: null })
+        .eq('match_id', match.id)
+        .eq('player_id', row.player_id)
     }
   }
 
