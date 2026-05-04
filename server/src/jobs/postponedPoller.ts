@@ -8,16 +8,28 @@ function toMatchStatus(short: string): string {
   return 'scheduled'
 }
 
-// 延期中の試合を30分ごとに監視し、再スケジュールされたら date / status を更新する
+/**
+ * 延期試合の再スケジュール監視（5分ごとに呼ばれる）
+ *
+ * 元の試合時刻から2時間以内: 高頻度（5分ごと）でAPIチェック
+ * 2時間を過ぎたもの: scheduleSync（日次）に任せてここではスキップ
+ */
 export async function pollPostponed() {
+  const now = new Date()
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
+
   const { data: matches } = await supabase
     .from('matches')
-    .select('id, api_fixture_id, date, status')
+    .select('id, api_fixture_id, date')
     .eq('status', 'postponed')
 
   if (!matches || matches.length === 0) return
 
-  for (const match of matches) {
+  // 元の試合時刻から2時間以内のものだけチェック
+  const recentMatches = matches.filter((m) => new Date(m.date) >= twoHoursAgo)
+  if (recentMatches.length === 0) return
+
+  for (const match of recentMatches) {
     try {
       const fixture = await fetchFixture(match.api_fixture_id)
       if (!fixture) continue
@@ -34,7 +46,6 @@ export async function pollPostponed() {
         current_minute: fixture.fixture.status.elapsed,
         home_score: fixture.goals.home ?? null,
         away_score: fixture.goals.away ?? null,
-        // scheduled に戻った場合はラインナップを再取得させる
         ...(newStatus === 'scheduled' ? { lineup_fetched: false } : {}),
         updated_at: new Date().toISOString(),
       }).eq('id', match.id)
