@@ -56,6 +56,14 @@ export async function pollPostponed() {
         updated_at: new Date().toISOString(),
       }).eq('id', match.id)
 
+      // scheduled に戻った場合はアラームの発火済みフラグもリセット
+      // （スタメン発表後に延期→再スケジュールされた場合に二重アラームを防ぎつつ正常動作させる）
+      if (newStatus === 'scheduled') {
+        await supabase.from('alarms')
+          .update({ sub_alarm_fired: false })
+          .eq('match_id', match.id)
+      }
+
       console.log(`[postponedPoller] ${match.id}: postponed → ${newStatus} (${fixture.fixture.date})`)
     } catch (err) {
       console.error(`[postponedPoller] fixture ${match.api_fixture_id} エラー:`, err)
