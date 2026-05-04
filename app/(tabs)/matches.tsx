@@ -373,9 +373,8 @@ const MatchCard = React.memo(function MatchCard({ match, onAlarmPress }: { match
               </Text>
             </View>
           )}
-          {isFinished && <Text style={styles.finishedText}>終了</Text>}
           {isPostponed && <Text style={styles.postponedText}>延期</Text>}
-          {(isScheduled || isPostponed) && (
+          {(isScheduled || isPostponed || isFinished) && (
             <Text style={[styles.timeText, isPostponed && styles.postponedText]}>
               {formatMatchTime(match.date)}
             </Text>
