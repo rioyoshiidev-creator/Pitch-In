@@ -198,6 +198,10 @@ function AlarmPermissionScreen() {
         </View>
         <Text style={styles.permissionBoxFooter}>詳細は設定画面の「アラームが鳴らない時」から確認できます。</Text>
       </View>
+      <View style={styles.disclaimerBox}>
+        <Ionicons name="information-circle-outline" size={15} color={Colors.textDim} style={{ marginTop: 1 }} />
+        <Text style={styles.disclaimerText}>試合情報は外部サービスから取得しています。稀に情報が誤っている場合があり、誤った通知やアラームが鳴ることがあります。</Text>
+      </View>
     </View>
   )
 }
@@ -322,6 +326,8 @@ const styles = StyleSheet.create({
   permissionText: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18, marginTop: 2 },
   warnItemTitle: { fontSize: 13, fontWeight: '700', color: Colors.text },
   permissionBoxFooter: { fontSize: 12, color: Colors.textDim, lineHeight: 17, marginTop: 4 },
+  disclaimerBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 12, paddingHorizontal: 4 },
+  disclaimerText: { flex: 1, fontSize: 11, color: Colors.textDim, lineHeight: 16 },
 
   subDots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 14 },
   subDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
